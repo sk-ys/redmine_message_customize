@@ -1,2 +1,3 @@
 .history
 tmp/
+/config/locales/custom_messages/projects/*

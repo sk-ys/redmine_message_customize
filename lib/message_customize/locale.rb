@@ -10,9 +10,31 @@ module MessageCustomize
         @available_locales ||= Rails.application.config.i18n.load_path.map {|path| File.basename(path, '.*')}.uniq.sort.map(&:to_sym)
       end
 
-      def reload!(*languages)
+      def reload!(*languages, project_id)
         available_languages = self.find_language(languages.flatten)
-        paths = Rails.application.config.i18n.load_path.select {|path| available_languages.include?(File.basename(path, '.*').to_s)}
+
+        if !project_id.nil?
+          p = Redmine::Plugin.find(:redmine_message_customize)
+          projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
+          current_user_language = User.current.language.presence || Setting.default_language
+          locale_per_project_path = File.join(projects_dir, "#{project_id}.#{current_user_language}.yml")
+
+          # exsample to create a locale file per project
+          Dir.mkdir(projects_dir, 0664) unless Dir.exist?(projects_dir)
+          unless File.exist?(locale_per_project_path)
+            YAML.dump({
+              'en': {
+                'label_related_issues': "---#{project_id}---",
+                'label_overview': "Overview - #{project_id}"
+              }
+            }, File.open(locale_per_project_path, 'w'))
+          end
+
+          # append locale file path
+          Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
+        end
+
+        paths = Rails.application.config.i18n.load_path.select {|path| available_languages.include?(File.basename(path, '.*').to_s.split(".")[-1])}
         I18n.backend.load_translations(paths)
         if customizable_plugin_messages?
           available_languages.each{|lang| @available_messages[:"#{lang}"] = I18n.backend.send(:translations)[:"#{lang}"] || {}}

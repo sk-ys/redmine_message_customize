@@ -12,9 +12,20 @@ module MessageCustomize
     module InstanceMethod
       def reload_customize_messages
         custom_message_setting = CustomMessageSetting.find_or_default
-        return if custom_message_setting.latest_messages_applied?(current_user_language)
 
-        MessageCustomize::Locale.reload!([current_user_language])
+        project_id = params["project_id"]
+        if project_id.nil?
+          if params["controller"] == "projects" && params["id"].present?
+            project_id = Project.find(params["id"]).name.downcase
+          elsif params["controller"] == "issues" && params["id"].present?
+            project_id = Issue.find(params["id"]).project.name.downcase
+          end
+        end
+
+        # TODO:
+        # return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
+
+        MessageCustomize::Locale.reload!([current_user_language], project_id)
       end
 
       private
