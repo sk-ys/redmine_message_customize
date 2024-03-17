@@ -22,3 +22,5 @@ ja:
   label_enable_customize: カスタマイズを有効にする
   label_disable_customize: カスタマイズを無効にする
   label_default_messages: デフォルトのメッセージを確認する
+  label_enable_per_project: プロジェクトごとにカスタムメッセージを有効にする
+  notice_low_performance: 有効にした場合、パフォーマンスが低下するリスクがあります。

@@ -13,19 +13,24 @@ module MessageCustomize
       def reload_customize_messages
         custom_message_setting = CustomMessageSetting.find_or_default
 
-        project_id = params["project_id"]
-        if project_id.nil?
-          if params["controller"] == "projects" && params["id"].present?
-            project_id = Project.find(params["id"]).name.downcase
-          elsif params["controller"] == "issues" && params["id"].present?
-            project_id = Issue.find(params["id"]).project.name.downcase
+        if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
+          project_id = nil
+        else
+          project_id = params["project_id"]
+          if project_id.nil? && params["id"].present?
+            case params["controller"]
+            when "projects"
+              project_id = Project.find(params["id"]).name.downcase
+            when "issues"
+              project_id = Issue.find(params["id"]).project.name.downcase
+            end
           end
         end
 
-        return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
-
         # If customization is disabled, remove project_id
         project_id = nil unless custom_message_setting.enabled?(project_id) if project_id.present?
+
+        return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
 
         MessageCustomize::Locale.reload!([current_user_language], project_id)
       end

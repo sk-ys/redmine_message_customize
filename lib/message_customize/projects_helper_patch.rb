@@ -5,6 +5,8 @@ module MessageCustomize
     include CustomMessageSettingsHelper
 
     def project_settings_tabs
+      return super if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
+
       tabs = super
 
       # @setting = Setting.plugin_redmine_message_customize

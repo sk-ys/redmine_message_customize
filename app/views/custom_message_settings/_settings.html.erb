@@ -1,0 +1,11 @@
+<p>
+  <label for="settings_enabled_per_project">
+    <%= l(:label_enable_per_project) %>
+    <br>
+    <cite style="font-weight: normal; font-size: smaller;">
+      ⚠️ <%= l(:notice_low_performance) %>
+    </cite>
+  </label>
+  <input type="hidden" name="settings[enabled_per_project]" value='0'>
+  <%= check_box_tag 'settings[enabled_per_project]', '1', @settings[:enabled_per_project] == '1' %>
+</p>

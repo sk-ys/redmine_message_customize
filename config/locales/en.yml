@@ -22,3 +22,5 @@ en:
   label_enable_customize: Enable customize
   label_disable_customize: Disable customize
   label_default_messages: Confirm default messages
+  label_enable_per_project: Enable custom message per project
+  notice_low_performance: If enabled, there is a risk of low performance.
