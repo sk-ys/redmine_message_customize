@@ -130,6 +130,11 @@ class CustomMessageSetting < Setting
     new_hash
   end
 
+  def remove_project(project_id)
+    paths = Dir.glob("#{projects_dir}/#{project_id}.*.yml")
+    paths.each {|path| File.delete(path)}
+  end
+
   private
 
   def projects_dir
