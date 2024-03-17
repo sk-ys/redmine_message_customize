@@ -3,6 +3,7 @@
 require File.expand_path('../lib/message_customize/locale', __FILE__)
 require File.expand_path('../lib/message_customize/hooks', __FILE__)
 require File.expand_path('../lib/message_customize/application_controller_patch', __FILE__)
+require File.expand_path('../lib/message_customize/projects_helper_patch', __FILE__)
 
 p = Redmine::Plugin.register :redmine_message_customize do
   name 'Redmine message customize plugin'

@@ -5,4 +5,6 @@ Rails.application.routes.draw do
     post :update,           on: :collection
     post :toggle_enabled,   on: :collection
   end
+
+  post 'projects/:project_id/settings/message_customize', controller: 'custom_message_settings', action: 'update', as: 'projects_custom_message_settings'
 end

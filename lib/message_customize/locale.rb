@@ -13,25 +13,19 @@ module MessageCustomize
       def reload!(*languages, project_id)
         available_languages = self.find_language(languages.flatten)
 
-        if !project_id.nil?
+        # Remove all project locale settings
+        Rails.application.config.i18n.load_path.delete_if {|path| path.include?('custom_messages/projects/')}
+
+        if project_id.present?
           p = Redmine::Plugin.find(:redmine_message_customize)
           projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
-          current_user_language = User.current.language.presence || Setting.default_language
-          locale_per_project_path = File.join(projects_dir, "#{project_id}.#{current_user_language}.yml")
 
-          # exsample to create a locale file per project
-          Dir.mkdir(projects_dir, 0664) unless Dir.exist?(projects_dir)
-          unless File.exist?(locale_per_project_path)
-            YAML.dump({
-              'en': {
-                'label_related_issues': "---#{project_id}---",
-                'label_overview': "Overview - #{project_id}"
-              }
-            }, File.open(locale_per_project_path, 'w'))
+          available_languages.each do |lang|
+            locale_per_project_path = File.join(projects_dir, "#{project_id}.#{lang}.yml")
+
+            # Append project locale file path
+            Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
           end
-
-          # append locale file path
-          Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
         end
 
         paths = Rails.application.config.i18n.load_path.select {|path| available_languages.include?(File.basename(path, '.*').to_s.split(".")[-1])}
@@ -60,9 +54,9 @@ module MessageCustomize
         end
       end
 
-      def available_messages(lang)
+      def available_messages(lang, project_id=nil)
         lang = :"#{lang}"
-        self.reload!(lang) if @available_messages[lang].blank?
+        self.reload!(lang, project_id) if @available_messages[lang].blank?
         @available_messages[lang] || {}
       end
 

@@ -1,4 +1,4 @@
-<%= form_tag custom_message_settings_path, method: :post do %>
+<%= form_tag @project.blank? ? custom_message_settings_path : projects_custom_message_settings_path(@project.name.downcase), method: :post do %>
   <%= hidden_field_tag :tab, 'yaml' %>
   <div class='help-message wiki'>
     <p>
@@ -8,6 +8,6 @@
     <p><%= l(:text_placeholder_template_case) %></p>
     <pre><%= l(:text_placeholder_yaml_template) %></pre>
   </div>
-  <%= text_area_tag 'settings[custom_messages_yaml]', @setting.custom_messages_to_yaml, rows: '30', style: 'width: 100%', placeholder: l(:text_placeholder_yaml_template) %>
+  <%= text_area_tag 'settings[custom_messages_yaml]', @setting.custom_messages_to_yaml(@project&.name&.downcase), rows: '30', style: 'width: 100%', placeholder: l(:text_placeholder_yaml_template) %>
   <%= submit_tag l(:button_save) %>
 <% end %>

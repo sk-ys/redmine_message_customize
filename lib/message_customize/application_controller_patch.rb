@@ -22,8 +22,10 @@ module MessageCustomize
           end
         end
 
-        # TODO:
-        # return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
+        return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
+
+        # If customization is disabled, remove project_id
+        project_id = nil unless custom_message_setting.enabled?(project_id) if project_id.present?
 
         MessageCustomize::Locale.reload!([current_user_language], project_id)
       end

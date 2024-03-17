@@ -3,6 +3,7 @@ class CustomMessageSettingsController < ApplicationController
   menu_item :custom_messages
   self.main_menu = false
   before_action :require_admin, :set_custom_message_setting, :set_lang
+  before_action :find_project, only: [:edit, :toggle_enabled]
   require_sudo_mode :edit, :update, :toggle_enabled, :default_messages
 
   def edit
@@ -14,16 +15,21 @@ class CustomMessageSettingsController < ApplicationController
 
   def update
     if setting_params.key?(:custom_messages) || params[:tab] == 'normal'
-      @setting.update_with_custom_messages(setting_params[:custom_messages].try(:to_unsafe_h).try(:to_hash) || {}, @lang)
+      @setting.update_with_custom_messages(setting_params[:custom_messages].try(:to_unsafe_h).try(:to_hash) || {}, @lang, params[:project_id])
     elsif setting_params.key?(:custom_messages_yaml)
-      @setting.update_with_custom_messages_yaml(setting_params[:custom_messages_yaml])
+      @setting.update_with_custom_messages_yaml(setting_params[:custom_messages_yaml], params[:project_id])
     end
 
-    if @setting.errors.blank?
-      flash[:notice] = l(:notice_successful_update)
-      redirect_to edit_custom_message_settings_path(tab: params[:tab], lang: @lang)
+    if params[:project_id].present?
+      flash[:notice] = l(:notice_successful_update) if @setting.errors.blank?
+      redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang)
     else
-      render :edit
+      if @setting.errors.blank?
+        flash[:notice] = l(:notice_successful_update)
+        redirect_to edit_custom_message_settings_path(tab: params[:tab], lang: @lang)
+      else
+        render :edit
+      end
     end
 
   # Catch an exception that occurs when the value field capacity is exceeded (ActiveRecord::ValueTooLong)
@@ -32,12 +38,20 @@ class CustomMessageSettingsController < ApplicationController
   end
 
   def toggle_enabled
-    if @setting.toggle_enabled!
+    if @setting.toggle_enabled!(params[:project_id])
       flash[:notice] =
-        @setting.enabled? ? l(:notice_enabled_customize) : l(:notice_disabled_customize)
-      redirect_to edit_custom_message_settings_path
+        @setting.enabled?(params[:project_id]) ? l(:notice_enabled_customize) : l(:notice_disabled_customize)
+      if params[:project_id].present?
+        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: params[:project_id])
+      else
+        redirect_to edit_custom_message_settings_path
+      end
     else
-      render :edit
+      if params[:project_id].present?
+        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: params[:project_id])
+      else
+        render :edit
+      end
     end
   end
 
@@ -56,5 +70,11 @@ class CustomMessageSettingsController < ApplicationController
       MessageCustomize::Locale.find_language(
         params[:lang].presence || @setting.custom_messages.keys.first || current_user_language
       )
+  end
+
+  def find_project(project_id=params[:project_id])
+    @project = Project.find(project_id)
+  rescue ActiveRecord::RecordNotFound
+    @project = nil
   end
 end

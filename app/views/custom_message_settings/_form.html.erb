@@ -1,0 +1,28 @@
+<% @lang = params[:lang] if params[:lang].present? %>
+<% project_id = @project&.name&.downcase %>
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag('custom_messages', plugin: 'redmine_message_customize') %>
+  <%= stylesheet_link_tag('select2.min', plugin: 'redmine_message_customize') %>
+  <%= javascript_include_tag('select2.min', plugin: 'redmine_message_customize') %>
+<% end %>
+
+<% unless @setting.enabled?(project_id) %>
+  <div class='flash warning'>
+    <%= l(:text_disabled_customize) %>
+  </div>
+<% end %>
+
+<div class='message-customize-menu contextual'>
+  <%= link_to (@setting.enabled?(project_id) ? l(:label_disable_customize) : l(:label_enable_customize)), toggle_enabled_custom_message_settings_path({project_id: project_id}), method: :post, class: 'icon icon-settings' %> /
+  <%= open_default_messages_window_link(@lang) %>
+</div>
+
+<h2><%= l(:label_custom_messages) %></h2>
+
+<% if @setting.errors.any? %>
+  <%= error_messages_for(@setting) %>
+<% end %>
+
+<% normal_tab = {name: 'normal', partial: 'custom_message_settings/normal_tab', label: 'label_normal_tab', url: "#{project_url(@project)}/settings/message_customize?lang=#{@lang}&tab=normal", onclick: "if(typeof arguments !== 'undefined'){arguments[0].preventDefault();}if((new window.URL(location.href)).searchParams.get('tab')==='yaml'&&$('#tab-normal').data('initialized')===undefined){showTab('yaml',$('#tab-yaml')[0].href);}else{showTab('normal','#{project_url(@project)}/settings/message_customize?tab=normal&lang='+$('#lang').val());}$('#tab-normal').data('initialized',true);"} %>
+<% yaml_tab = {name: 'yaml', partial: 'custom_message_settings/yaml_tab', label: 'label_yaml_tab', url: "#{project_url(@project)}/settings/message_customize?tab=yaml"} %>
+<%= render_tabs (@setting.errors.any? ? [] : [normal_tab]) + [yaml_tab] %>

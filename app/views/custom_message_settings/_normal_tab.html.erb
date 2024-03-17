@@ -1,7 +1,7 @@
-<%= form_tag custom_message_settings_path, method: :post do %>
+<%= form_tag @project.blank? ? custom_message_settings_path : projects_custom_message_settings_path(@project.name.downcase), method: :post do %>
   <%= hidden_field_tag :tab, 'normal' %>
   <label><%= l(:field_language) %>: </label>
-  <%= select_tag 'lang', options_for_select(languages_options, @lang), include_blank: true, data: {remote: true, url: url_for(action: :edit)}, onchange: '$("#ajax-indicator").show();' %>
+  <%= select_tag 'lang', options_for_select(languages_options, @lang), include_blank: true, data: {remote: true, url: url_for(action: :edit, controller: :custom_message_settings, params: {project_id: @project&.name&.downcase})}, onchange: '$("#ajax-indicator").show();' %>
   <hr>
 
   <div id='edit-custom-messages'>
