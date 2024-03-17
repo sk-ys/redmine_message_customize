@@ -20,9 +20,9 @@ module MessageCustomize
           if project_id.nil? && params["id"].present?
             case params["controller"]
             when "projects"
-              project_id = Project.find(params["id"]).name.downcase
+              project_id = Project.find(params["id"]).identifier
             when "issues"
-              project_id = Issue.find(params["id"]).project.name.downcase
+              project_id = Issue.find(params["id"]).project.identifier
             end
           end
         end

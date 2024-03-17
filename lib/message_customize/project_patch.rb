@@ -15,7 +15,7 @@ module MessageCustomize
         destroy_without_remove_custom_messages
 
         custom_message_setting = CustomMessageSetting.find_or_default
-        custom_message_setting.remove_project(self.name.downcase)
+        custom_message_setting.remove_project(self.identifier)
       end
     end
   end

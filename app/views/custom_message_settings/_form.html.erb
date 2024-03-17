@@ -1,5 +1,5 @@
 <% @lang = params[:lang] if params[:lang].present? %>
-<% project_id = @project&.name&.downcase %>
+<% project_id = @project&.identifier %>
 <% content_for :header_tags do %>
   <%= stylesheet_link_tag('custom_messages', plugin: 'redmine_message_customize') %>
   <%= stylesheet_link_tag('select2.min', plugin: 'redmine_message_customize') %>
