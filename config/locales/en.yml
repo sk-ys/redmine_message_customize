@@ -24,3 +24,4 @@ en:
   label_default_messages: Confirm default messages
   label_enable_per_project: Enable custom message per project
   notice_low_performance: If enabled, there is a risk of low performance.
+  label_customize_project_messages: Customize project messages

@@ -28,7 +28,15 @@ module MessageCustomize
         end
 
         # If customization is disabled, remove project_id
-        project_id = nil unless custom_message_setting.enabled?(project_id) if project_id.present?
+        if project_id.present?
+          project = Project.find(project_id)
+          if project.present?
+            project_id = nil if project.enabled_modules.where(name: "redmine_message_customize").blank?
+            project_id = nil unless custom_message_setting.enabled?(project_id)
+          else
+            project_id = nil
+          end
+        end
 
         return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
 

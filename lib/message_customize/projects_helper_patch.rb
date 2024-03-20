@@ -5,11 +5,12 @@ module MessageCustomize
     include CustomMessageSettingsHelper
 
     def project_settings_tabs
-      return super if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
-
       tabs = super
 
-      # @setting = Setting.plugin_redmine_message_customize
+      return tabs if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
+      return tabs if @project.enabled_modules.where(name: "redmine_message_customize").blank?
+      return tabs unless User.current.allowed_to?(:customize_project_messages, @project)
+
       @setting = CustomMessageSetting.find_or_default
       @lang = User.current.language.presence || Setting.default_language
 

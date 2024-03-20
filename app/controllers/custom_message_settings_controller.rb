@@ -2,8 +2,10 @@ class CustomMessageSettingsController < ApplicationController
   layout 'admin'
   menu_item :custom_messages
   self.main_menu = false
-  before_action :require_admin, :set_custom_message_setting, :set_lang
-  before_action :find_project, only: [:edit, :toggle_enabled]
+  before_action :require_admin_if_global, only: [:update, :toggle_enabled]
+  before_action :set_custom_message_setting, :set_lang
+  before_action :find_project, only: [:edit, :update, :toggle_enabled]
+  before_action :authorize_if_project, only: [:update, :toggle_enabled]
   require_sudo_mode :edit, :update, :toggle_enabled, :default_messages
 
   def edit
@@ -76,5 +78,18 @@ class CustomMessageSettingsController < ApplicationController
     @project = Project.find(project_id)
   rescue ActiveRecord::RecordNotFound
     @project = nil
+  end
+
+  def require_admin_if_global
+    require_admin if params[:project_id].blank?
+  end
+
+  def authorize_if_project
+    if params[:project_id].present?
+      authorize(
+        ctrl = params[:controller],
+        action = params[:action] == 'toggle_enabled' ? 'update' : params[:action]
+        )
+    end
   end
 end

@@ -24,3 +24,4 @@ de:
   label_default_messages: Standardbezeichnugen ansehen
   label_enable_per_project: Benutzerdefinierte Nachricht pro Projekt aktivieren
   notice_low_performance: Wenn diese Option aktiviert ist, besteht das Risiko einer geringen Leistung.
+  label_customize_project_messages: Anpassen von Projektnachrichten
