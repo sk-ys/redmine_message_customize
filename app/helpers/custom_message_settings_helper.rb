@@ -1,18 +1,18 @@
 module CustomMessageSettingsHelper
-  def available_message_options(setting, lang, project_id=nil)
+  def available_message_options(setting, lang, project=nil)
     options = [['', '']] +
-                CustomMessageSetting.flatten_hash(MessageCustomize::Locale.available_messages(lang, project_id))
+                CustomMessageSetting.flatten_hash(MessageCustomize::Locale.available_messages(lang, project))
                 .select{|_k, v| v.is_a?(String)}
                 .map{|k, v| ["#{k}: #{v}", k]}
 
-    options_for_select(options, disabled: setting.custom_messages_to_flatten_hash(lang, project_id).keys)
+    options_for_select(options, disabled: setting.custom_messages_to_flatten_hash(lang, project).keys)
   end
 
-  def normal_mode_input_fields(setting, lang, project_id=nil)
-    return '' if setting.custom_messages(lang.to_s, false, project_id).is_a?(String) || setting.custom_messages(lang.to_s, false, project_id).blank?
+  def normal_mode_input_fields(setting, lang, project=nil)
+    return '' if setting.custom_messages(lang.to_s, false, project).is_a?(String) || setting.custom_messages(lang.to_s, false, project).blank?
 
     content = ActiveSupport::SafeBuffer.new
-    custom_messages_hash = setting.custom_messages_to_flatten_hash(lang.to_s, project_id)
+    custom_messages_hash = setting.custom_messages_to_flatten_hash(lang.to_s, project)
     custom_messages_hash.each do |k, v|
       content += content_tag(:p) do
         content_tag(:label, k) +

@@ -1,19 +1,18 @@
 <% @lang = params[:lang] if params[:lang].present? %>
-<% project_id = @project&.identifier %>
 <% content_for :header_tags do %>
   <%= stylesheet_link_tag('custom_messages', plugin: 'redmine_message_customize') %>
   <%= stylesheet_link_tag('select2.min', plugin: 'redmine_message_customize') %>
   <%= javascript_include_tag('select2.min', plugin: 'redmine_message_customize') %>
 <% end %>
 
-<% unless @setting.enabled?(project_id) %>
+<% unless @setting.enabled?(@project) %>
   <div class='flash warning'>
     <%= l(:text_disabled_customize) %>
   </div>
 <% end %>
 
 <div class='message-customize-menu contextual'>
-  <%= link_to (@setting.enabled?(project_id) ? l(:label_disable_customize) : l(:label_enable_customize)), toggle_enabled_custom_message_settings_path({project_id: project_id}), method: :post, class: 'icon icon-settings' %> /
+  <%= link_to (@setting.enabled?(@project) ? l(:label_disable_customize) : l(:label_enable_customize)), toggle_enabled_custom_message_settings_path({project_id: @project&.identifier}), method: :post, class: 'icon icon-settings' %> /
   <%= open_default_messages_window_link(@lang) %>
 </div>
 

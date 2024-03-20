@@ -13,34 +13,11 @@ module MessageCustomize
       def reload_customize_messages
         custom_message_setting = CustomMessageSetting.find_or_default
 
-        if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
-          project_id = nil
-        else
-          project_id = params["project_id"]
-          if project_id.nil? && params["id"].present?
-            case params["controller"]
-            when "projects"
-              project_id = Project.find(params["id"]).identifier
-            when "issues"
-              project_id = Issue.find(params["id"]).project.identifier
-            end
-          end
-        end
+        project = MessageCustomize::ApplicationControllerPatch.find_project(params, custom_message_setting)
 
-        # If customization is disabled, remove project_id
-        if project_id.present?
-          project = Project.find(project_id)
-          if project.present?
-            project_id = nil if project.enabled_modules.where(name: "redmine_message_customize").blank?
-            project_id = nil unless custom_message_setting.enabled?(project_id)
-          else
-            project_id = nil
-          end
-        end
+        return if custom_message_setting.latest_messages_applied?(current_user_language, project)
 
-        return if custom_message_setting.latest_messages_applied?(current_user_language, project_id)
-
-        MessageCustomize::Locale.reload!([current_user_language], project_id)
+        MessageCustomize::Locale.reload!([current_user_language], project)
       end
 
       private
@@ -48,6 +25,33 @@ module MessageCustomize
       def current_user_language
         User.current.language.presence || Setting.default_language
       end
+    end
+
+    module_function
+
+    def find_project(params, custom_message_setting)
+      return nil if Setting["plugin_redmine_message_customize"][:enabled_per_project] != "1"
+
+      project_id = params[:project_id]
+      project =
+        if project_id.nil? && params["id"].present?
+          case params["controller"]
+          when "projects"
+            Project.find(params["id"])
+          when "issues"
+            Issue.find(params["id"]).project
+          end
+        else
+          Project.find(project_id)
+        end
+
+      # If customization is disabled, remove project
+      return nil if project.blank? ||
+        project.enabled_modules.where(name: "redmine_message_customize").blank? ||
+        !custom_message_setting.enabled?(project)
+      return project
+    rescue ActiveRecord::RecordNotFound
+      return nil
     end
   end
 end

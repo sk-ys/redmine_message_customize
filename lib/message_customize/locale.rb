@@ -10,18 +10,18 @@ module MessageCustomize
         @available_locales ||= Rails.application.config.i18n.load_path.map {|path| File.basename(path, '.*')}.uniq.sort.map(&:to_sym)
       end
 
-      def reload!(*languages, project_id)
+      def reload!(*languages, project)
         available_languages = self.find_language(languages.flatten)
 
         # Remove all project locale settings
         Rails.application.config.i18n.load_path.delete_if {|path| path.include?('custom_messages/projects/')}
 
-        if project_id.present?
+        if project.present?
           p = Redmine::Plugin.find(:redmine_message_customize)
           projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
 
           available_languages.each do |lang|
-            locale_per_project_path = File.join(projects_dir, "#{project_id}.#{lang}.yml")
+            locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
 
             # Append project locale file path
             Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
@@ -54,9 +54,9 @@ module MessageCustomize
         end
       end
 
-      def available_messages(lang, project_id=nil)
+      def available_messages(lang, project=nil)
         lang = :"#{lang}"
-        self.reload!(lang, project_id) if @available_messages[lang].blank?
+        self.reload!(lang, project) if @available_messages[lang].blank?
         @available_messages[lang] || {}
       end
 

@@ -17,12 +17,12 @@ class CustomMessageSettingsController < ApplicationController
 
   def update
     if setting_params.key?(:custom_messages) || params[:tab] == 'normal'
-      @setting.update_with_custom_messages(setting_params[:custom_messages].try(:to_unsafe_h).try(:to_hash) || {}, @lang, params[:project_id])
+      @setting.update_with_custom_messages(setting_params[:custom_messages].try(:to_unsafe_h).try(:to_hash) || {}, @lang, @project)
     elsif setting_params.key?(:custom_messages_yaml)
-      @setting.update_with_custom_messages_yaml(setting_params[:custom_messages_yaml], params[:project_id])
+      @setting.update_with_custom_messages_yaml(setting_params[:custom_messages_yaml], @project)
     end
 
-    if params[:project_id].present?
+    if @project.present?
       flash[:notice] = l(:notice_successful_update) if @setting.errors.blank?
       redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang)
     else
@@ -40,17 +40,17 @@ class CustomMessageSettingsController < ApplicationController
   end
 
   def toggle_enabled
-    if @setting.toggle_enabled!(params[:project_id])
+    if @setting.toggle_enabled!(@project)
       flash[:notice] =
-        @setting.enabled?(params[:project_id]) ? l(:notice_enabled_customize) : l(:notice_disabled_customize)
-      if params[:project_id].present?
-        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: params[:project_id])
+        @setting.enabled?(@project) ? l(:notice_enabled_customize) : l(:notice_disabled_customize)
+      if @project.present?
+        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: @project&.identifier)
       else
         redirect_to edit_custom_message_settings_path
       end
     else
-      if params[:project_id].present?
-        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: params[:project_id])
+      if @project.present?
+        redirect_to projects_custom_message_settings_path(tab: params[:tab], lang: @lang, project_id: @project&.identifier)
       else
         render :edit
       end
