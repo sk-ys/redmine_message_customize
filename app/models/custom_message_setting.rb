@@ -2,8 +2,17 @@ class CustomMessageSetting < Setting
   validate :convertible_to_yaml,
            :custom_message_languages_are_available, :custom_message_keys_are_available
 
+  @@project_dir = nil
+
   def self.find_or_default
     super('plugin_redmine_message_customize')
+  end
+
+  def self.projects_dir
+    return @@project_dir if @@project_dir.present?
+
+    p = Redmine::Plugin.find(:redmine_message_customize)
+    @@projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
   end
 
   def enabled?(project=nil)
@@ -36,11 +45,21 @@ class CustomMessageSetting < Setting
   def latest_messages_applied?(lang, project=nil)
     return true if self.new_record?
 
+    message_customize_project_paths = Rails.application.config.i18n.load_path.select do |path|
+      path.include?('custom_messages/projects/')
+    end
+
     # If project is specified, reload every time
-    # TODO: Comparing timestamps
-    return false if project.present? ||
-      (project.blank? &&
-       Rails.application.config.i18n.load_path.select{|path| path.include?('custom_messages/projects/')}.present?)
+    return false if  project.blank? && message_customize_project_paths.present?
+
+    if project.present?
+      return false if message_customize_project_paths.blank?
+      return false if self.value[:project_settings][:"#{project.identifier}"]&.[](:"#{lang}")&.[](:timestamp).blank?
+      message_customize_project_paths.each do |path|
+        return false unless path.include?("#{project.identifier}.#{lang}.yml")
+        return false unless self.value[:project_settings][:"#{project.identifier}"][:"#{lang}"][:timestamp] == File.mtime(path).to_i.to_s
+      end
+    end
 
     redmine_message_customize_timestamp = I18n.backend.send(:translations)[:"#{lang}"]&.[](:redmine_message_customize_timestamp)
     redmine_message_customize_timestamp == self.updated_on.to_i.to_s
@@ -133,18 +152,26 @@ class CustomMessageSetting < Setting
   end
 
   def remove_project(project)
-    paths = Dir.glob("#{projects_dir}/#{project.identifier}.*.yml")
+    paths = Dir.glob("#{CustomMessageSetting.projects_dir}/#{project.identifier}.*.yml")
     paths.each {|path| File.delete(path)}
   end
 
-  private
-
-  def projects_dir
-    return @project_dir if @project_dir.present?
-
-    p = Redmine::Plugin.find(:redmine_message_customize)
-    @projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
+  def update_project_customize_timestamp(project, lang, time)
+    init_project_settings(project)
+    self.transaction do
+      self.value = self.value
+        .merge({
+          project_settings: self.value[:project_settings].merge({
+            :"#{project.identifier}" => self.value[:project_settings][:"#{project.identifier}"].merge({
+              :"#{lang}" => {timestamp: time.to_i.to_s}
+            })
+          })
+        })
+      self.save
+    end
   end
+
+  private
 
   def raw_custom_messages
     self.value[:custom_messages] || self.value['custom_messages']
@@ -152,6 +179,7 @@ class CustomMessageSetting < Setting
 
   def raw_custom_messages_for_project(project, lang)
     custom_messages = {}
+    projects_dir = CustomMessageSetting.projects_dir
     return {} unless Dir.exist?(projects_dir)
 
     if lang.nil?
@@ -223,6 +251,7 @@ class CustomMessageSetting < Setting
 
   def save_custom_messages_for_project(value, lang, project)
     self.transaction do
+      projects_dir = CustomMessageSetting.projects_dir
       Dir.mkdir(projects_dir, 0664) unless Dir.exist?(projects_dir)
       locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
 
@@ -234,6 +263,9 @@ class CustomMessageSetting < Setting
       custom_messages = {}
       custom_messages[lang] = value
       File.open(locale_per_project_path, 'w') { |f| YAML.dump(custom_messages, f) }
+
+      # Update timestamp
+      update_project_customize_timestamp(project, lang, File.mtime(locale_per_project_path))
     end
   end
 

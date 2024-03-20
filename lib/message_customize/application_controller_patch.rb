@@ -17,7 +17,20 @@ module MessageCustomize
 
         return if custom_message_setting.latest_messages_applied?(current_user_language, project)
 
-        MessageCustomize::Locale.reload!([current_user_language], project)
+        lang = current_user_language
+        MessageCustomize::Locale.reload!([lang], project)
+
+        # Update customize timestamp for project
+        if project.present?
+          if custom_message_setting.value[:project_settings][:"#{project.identifier}"]&.[](:"#{lang}")&.[](:timestamp).blank?
+            locale_per_project_path = File.join(CustomMessageSetting.projects_dir, "#{project.identifier}.#{lang}.yml")
+            if Rails.application.config.i18n.load_path.include?(locale_per_project_path)
+              if File.exist?(locale_per_project_path)
+                custom_message_setting.update_project_customize_timestamp(project, lang, File.mtime(locale_per_project_path))
+              end
+            end
+          end
+        end
       end
 
       private

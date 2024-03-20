@@ -17,11 +17,8 @@ module MessageCustomize
         Rails.application.config.i18n.load_path.delete_if {|path| path.include?('custom_messages/projects/')}
 
         if project.present?
-          p = Redmine::Plugin.find(:redmine_message_customize)
-          projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
-
           available_languages.each do |lang|
-            locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
+            locale_per_project_path = File.join(CustomMessageSetting.projects_dir, "#{project.identifier}.#{lang}.yml")
 
             # Append project locale file path
             Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
