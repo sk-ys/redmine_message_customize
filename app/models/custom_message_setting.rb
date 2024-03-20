@@ -38,7 +38,9 @@ class CustomMessageSetting < Setting
 
     # If project is specified, reload every time
     # TODO: Comparing timestamps
-    return false if project.present?
+    return false if project.present? ||
+      (project.blank? &&
+       Rails.application.config.i18n.load_path.select{|path| path.include?('custom_messages/projects/')}.present?)
 
     redmine_message_customize_timestamp = I18n.backend.send(:translations)[:"#{lang}"]&.[](:redmine_message_customize_timestamp)
     redmine_message_customize_timestamp == self.updated_on.to_i.to_s
