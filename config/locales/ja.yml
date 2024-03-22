@@ -25,3 +25,4 @@ ja:
   label_enable_per_project: プロジェクトごとにカスタムメッセージを有効にする
   notice_low_performance: 有効にした場合、パフォーマンスが低下するリスクがあります。
   label_customize_project_messages: プロジェクトのメッセージのカスタマイズ
+  notice_disabled_by_administrator: 管理者によって無効化されています。

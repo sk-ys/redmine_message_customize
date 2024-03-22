@@ -25,3 +25,4 @@ en:
   label_enable_per_project: Enable custom message per project
   notice_low_performance: If enabled, there is a risk of low performance.
   label_customize_project_messages: Customize project messages
+  notice_disabled_by_administrator: Disabled by the administrator.

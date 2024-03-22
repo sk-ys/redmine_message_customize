@@ -9,5 +9,21 @@ module MessageCustomize
       custom_locales = Dir.glob(File.join(p.directory, 'config', 'locales', 'custom_messages', '*.rb'))
       Rails.application.config.i18n.load_path = (Rails.application.config.i18n.load_path - custom_locales + custom_locales)
     end
+
+    def view_projects_form(context={})
+      if Setting['plugin_redmine_message_customize'][:enabled_per_project] != '1'
+        <<~EOS
+          <script type="text/javascript">
+          //<![CDATA[
+          $(document).ready(()=>{
+            $('#project_enabled_module_names_redmine_message_customize')
+              .prop('disabled', true)
+              .attr('title', '#{l(:notice_disabled_by_administrator)}');
+          });
+          //]]>
+          </script>
+        EOS
+      end
+    end
   end
 end
