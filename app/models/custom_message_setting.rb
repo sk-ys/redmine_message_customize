@@ -27,12 +27,7 @@ class CustomMessageSetting < Setting
   def custom_messages(lang=nil, check_enabled=false, project=nil)
     return {} if check_enabled && !self.enabled?(project)
 
-    if project.present?
-      messages = raw_custom_messages_for_project(project, lang&.to_s)
-    else
-      messages = raw_custom_messages
-    end
-
+    messages = raw_custom_messages(project, lang&.to_s)
     messages = messages[lang.to_s] if lang.present?
     messages || {}
   end
@@ -49,9 +44,7 @@ class CustomMessageSetting < Setting
       path.include?('custom_messages/projects/')
     end
 
-    # If project is specified, reload every time
     return false if  project.blank? && message_customize_project_paths.present?
-
     if project.present?
       return false if message_customize_project_paths.blank?
       return false if self.value[:project_settings][:"#{project.identifier}"]&.[](:"#{lang}")&.[](:timestamp).blank?
@@ -151,7 +144,7 @@ class CustomMessageSetting < Setting
     new_hash
   end
 
-  def remove_project(project)
+  def remove_custom_messages_for_project(project)
     paths = Dir.glob("#{CustomMessageSetting.projects_dir}/#{project.identifier}.*.yml")
     paths.each {|path| File.delete(path)}
   end
@@ -173,29 +166,29 @@ class CustomMessageSetting < Setting
 
   private
 
-  def raw_custom_messages
-    self.value[:custom_messages] || self.value['custom_messages']
-  end
-
-  def raw_custom_messages_for_project(project, lang)
-    custom_messages = {}
-    projects_dir = CustomMessageSetting.projects_dir
-    return {} unless Dir.exist?(projects_dir)
-
-    if lang.nil?
-      MessageCustomize::Locale.available_locales.each do |locale|
-        custom_messages = custom_messages.merge(raw_custom_messages_for_project(project, locale))
-      end
+  def raw_custom_messages(project=nil, lang=nil)
+    if project.nil?
+      self.value[:custom_messages] || self.value['custom_messages']
     else
-      locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
-      self.transaction do
-        if File.exist?(locale_per_project_path)
-          custom_messages = open(locale_per_project_path, 'r') { |f| YAML.load(f) }
+      custom_messages = {}
+      projects_dir = CustomMessageSetting.projects_dir
+      return {} unless Dir.exist?(projects_dir)
+
+      if lang.nil?
+        MessageCustomize::Locale.available_locales.each do |locale|
+          custom_messages = custom_messages.merge(raw_custom_messages(project, locale))
+        end
+      else
+        locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
+        self.transaction do
+          if File.exist?(locale_per_project_path)
+            custom_messages = open(locale_per_project_path, 'r') { |f| YAML.load(f) }
+          end
         end
       end
-    end
 
-    custom_messages || {}
+      custom_messages || {}
+    end
   end
 
   def custom_messages=(messages)
