@@ -12,19 +12,6 @@ module MessageCustomize
 
       def reload!(*languages, project)
         available_languages = self.find_language(languages.flatten)
-
-        # Remove all project locale settings
-        Rails.application.config.i18n.load_path.delete_if {|path| path.include?('custom_messages/projects/')}
-
-        if project.present?
-          available_languages.each do |lang|
-            locale_per_project_path = File.join(CustomMessageSetting.projects_dir, "#{project.identifier}.#{lang}.yml")
-
-            # Append project locale file path
-            Rails.application.config.i18n.load_path += [locale_per_project_path] if File.exist?(locale_per_project_path)
-          end
-        end
-
         paths = Rails.application.config.i18n.load_path.select {|path| available_languages.include?(File.basename(path, '.*').to_s.split(".")[-1])}
         I18n.backend.load_translations(paths)
         if customizable_plugin_messages?

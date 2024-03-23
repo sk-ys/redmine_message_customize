@@ -2,17 +2,8 @@ class CustomMessageSetting < Setting
   validate :convertible_to_yaml,
            :custom_message_languages_are_available, :custom_message_keys_are_available
 
-  @@project_dir = nil
-
   def self.find_or_default
     super('plugin_redmine_message_customize')
-  end
-
-  def self.projects_dir
-    return @@project_dir if @@project_dir.present?
-
-    p = Redmine::Plugin.find(:redmine_message_customize)
-    @@projects_dir = File.join(p.directory, 'config', 'locales', 'custom_messages', 'projects')
   end
 
   def enabled?(project=nil)
@@ -32,26 +23,21 @@ class CustomMessageSetting < Setting
     messages || {}
   end
 
-  def custom_messages_with_timestamp(lang, project=nil)
-    messages = self.custom_messages(lang, true, project)
+  def custom_messages_with_timestamp(lang)
+    messages = self.custom_messages(lang, true)
+    project = self.value[:active_project]&.[](:id).present? ? Project.find(self.value[:active_project][:id]) : nil
+    messages.merge!(self.custom_messages(lang, true, project)) if project.present?
     messages.merge({'redmine_message_customize_timestamp' => self.try(:updated_on).to_i.to_s})
   end
 
   def latest_messages_applied?(lang, project=nil)
     return true if self.new_record?
 
-    message_customize_project_paths = Rails.application.config.i18n.load_path.select do |path|
-      path.include?('custom_messages/projects/')
-    end
+    return false if self.value[:active_project]&.[](:id) != project&.identifier
 
-    return false if  project.blank? && message_customize_project_paths.present?
     if project.present?
-      return false if message_customize_project_paths.blank?
-      return false if self.value[:project_settings][:"#{project.identifier}"]&.[](:"#{lang}")&.[](:timestamp).blank?
-      message_customize_project_paths.each do |path|
-        return false unless path.include?("#{project.identifier}.#{lang}.yml")
-        return false unless self.value[:project_settings][:"#{project.identifier}"][:"#{lang}"][:timestamp] == File.mtime(path).to_i.to_s
-      end
+      project_timestamp = self.value[:project_settings]&.[](:"#{project.identifier}")&.[](:timestamp)
+      return false if project_timestamp.blank? || self.value[:active_project]&.[](:timestamp) != project_timestamp
     end
 
     redmine_message_customize_timestamp = I18n.backend.send(:translations)[:"#{lang}"]&.[](:redmine_message_customize_timestamp)
@@ -74,18 +60,18 @@ class CustomMessageSetting < Setting
   def update_with_custom_messages(custom_messages, lang, project=nil)
     value = CustomMessageSetting.nested_hash(custom_messages)
 
-    if project.present?
-      save_custom_messages_for_project(value, lang, project)
-    else
-      original_custom_messages = self.custom_messages()
-      messages =
-        if value.present?
-          original_custom_messages.merge({lang => value})
-        else
-          original_custom_messages.delete(lang)
-          original_custom_messages
-        end
+    original_custom_messages = self.custom_messages(nil, false, project)
+    messages =
+      if value.present?
+        original_custom_messages.merge({lang => value})
+      else
+        original_custom_messages.delete(lang)
+        original_custom_messages
+      end
 
+    if project.present?
+      save_custom_messages_for_project(messages, project)
+    else
       self.custom_messages = messages
       self.save
     end
@@ -94,10 +80,7 @@ class CustomMessageSetting < Setting
   def update_with_custom_messages_yaml(yaml, project=nil)
     if project.present?
       custom_messages = YAML.load(yaml)
-      languages = custom_messages.keys
-      languages.each do |lang|
-        save_custom_messages_for_project(custom_messages[lang], lang, project)
-      end
+      save_custom_messages_for_project(custom_messages, project)
     else
       self.custom_messages = yaml
       self.save
@@ -107,16 +90,18 @@ class CustomMessageSetting < Setting
   def toggle_enabled!(project=nil)
     init_project_settings(project) if project.present?
 
-    self.transaction do
-      if project.present?
-        self.value = self.value.merge({
-          project_settings: self.value[:project_settings].merge({:"#{project.identifier}" => {enabled: (!self.enabled?(project)).to_s}})
+    if project.present?
+      self.value = self.value.merge({
+        project_settings: self.value[:project_settings].merge({
+          :"#{project.identifier}" => self.value[:project_settings][:"#{project.identifier}"].merge({
+            enabled: (!self.enabled?(project)).to_s
+          })
         })
-      else
-        self.value = self.value.merge({enabled: (!self.enabled?).to_s})
-      end
-      self.save
+      })
+    else
+      self.value = self.value.merge({enabled: (!self.enabled?).to_s})
     end
+    self.save
   end
 
   # { date: { formats: { defaults: '%m/%d/%Y'}}} to {'date.formats.defaults' => '%m/%d/%Y'}
@@ -145,23 +130,34 @@ class CustomMessageSetting < Setting
   end
 
   def remove_custom_messages_for_project(project)
-    paths = Dir.glob("#{CustomMessageSetting.projects_dir}/#{project.identifier}.*.yml")
-    paths.each {|path| File.delete(path)}
+    return if self.value[:project_settings]&.[](:"#{project}").blank?
+
+    self.value = self.value
+      .merge({
+        project_settings: self.value[:project_settings].except(:"#{project}")
+      })
+    self.save
   end
 
-  def update_project_customize_timestamp(project, lang, time)
+  def update_project_customize_timestamp(project, time)
     init_project_settings(project)
-    self.transaction do
-      self.value = self.value
-        .merge({
-          project_settings: self.value[:project_settings].merge({
-            :"#{project.identifier}" => self.value[:project_settings][:"#{project.identifier}"].merge({
-              :"#{lang}" => {timestamp: time.to_i.to_s}
-            })
+    self.value = self.value
+      .merge({
+        project_settings: self.value[:project_settings].merge({
+          :"#{project.identifier}" => self.value[:project_settings][:"#{project.identifier}"].merge({
+            timestamp: time.to_i.to_s
           })
         })
-      self.save
-    end
+      })
+    self.save
+  end
+
+  def update_active_project(project)
+    timestamp = project.present? ? self.value[:project_settings][:"#{project.identifier}"]&.[](:timestamp) : nil
+    self.value = self.value.merge({
+      active_project: {id: project&.identifier, timestamp: timestamp.to_i.to_s}
+    })
+    self.save
   end
 
   private
@@ -170,24 +166,7 @@ class CustomMessageSetting < Setting
     if project.nil?
       self.value[:custom_messages] || self.value['custom_messages']
     else
-      custom_messages = {}
-      projects_dir = CustomMessageSetting.projects_dir
-      return {} unless Dir.exist?(projects_dir)
-
-      if lang.nil?
-        MessageCustomize::Locale.available_locales.each do |locale|
-          custom_messages = custom_messages.merge(raw_custom_messages(project, locale))
-        end
-      else
-        locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
-        self.transaction do
-          if File.exist?(locale_per_project_path)
-            custom_messages = open(locale_per_project_path, 'r') { |f| YAML.load(f) }
-          end
-        end
-      end
-
-      custom_messages || {}
+      return self.value[:project_settings]&.[](:"#{project.identifier}")&.[](:custom_messages) || {}
     end
   end
 
@@ -242,38 +221,28 @@ class CustomMessageSetting < Setting
     end
   end
 
-  def save_custom_messages_for_project(value, lang, project)
-    self.transaction do
-      projects_dir = CustomMessageSetting.projects_dir
-      Dir.mkdir(projects_dir, 0664) unless Dir.exist?(projects_dir)
-      locale_per_project_path = File.join(projects_dir, "#{project.identifier}.#{lang}.yml")
+  def save_custom_messages_for_project(value, project)
+    init_project_settings(project)
+    self.value = self.value.merge({
+      project_settings: self.value[:project_settings].merge({
+        :"#{project.identifier}" => self.value[:project_settings][:"#{project.identifier}"].merge({
+          custom_messages: value
+        })
+      })
+    })
+    self.save
 
-      if value.blank?
-        File.delete(locale_per_project_path) if File.exist?(locale_per_project_path)
-        return
-      end
-
-      custom_messages = {}
-      custom_messages[lang] = value
-      File.open(locale_per_project_path, 'w') { |f| YAML.dump(custom_messages, f) }
-
-      # Update timestamp
-      update_project_customize_timestamp(project, lang, File.mtime(locale_per_project_path))
-    end
+    update_project_customize_timestamp(project, Time.now)
   end
 
   def init_project_settings(project)
     if self.value[:project_settings].blank?
-      self.transaction do
-        self.value = self.value.merge({project_settings: {:"#{project.identifier}" => {enabled: true.to_s}}})
-        self.save
-      end
+      self.value = self.value.merge({project_settings: {:"#{project.identifier}" => {enabled: true.to_s}}})
+      self.save
     end
     if self.value[:project_settings][:"#{project.identifier}"].blank?
-      self.transaction do
-        self.value = self.value.merge({project_settings: self.value[:project_settings].merge({:"#{project.identifier}" => {enabled: true.to_s}})})
-        self.save
-      end
+      self.value = self.value.merge({project_settings: self.value[:project_settings].merge({:"#{project.identifier}" => {enabled: true.to_s}})})
+      self.save
     end
   end
 end

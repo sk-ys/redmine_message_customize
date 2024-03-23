@@ -18,7 +18,8 @@ p = Redmine::Plugin.register :redmine_message_customize do
     custom_messages: {},
     enabled: 'true',
     project_settings: {},
-    enabled_per_project: '0'
+    enabled_per_project: '0',
+    active_project: nil
   }, partial: 'custom_message_settings/settings'
   menu :admin_menu, :custom_messages, { controller: 'custom_message_settings', action: 'edit' },
          caption: :label_custom_messages, html: { class: 'icon icon-edit' }
