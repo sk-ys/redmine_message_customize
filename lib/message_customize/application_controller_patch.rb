@@ -37,10 +37,14 @@ module MessageCustomize
       project =
         if project_id.nil? && params["id"].present?
           case params["controller"]
-          when "projects", "activities", "repositories"
+          when "projects", "activities", "repositories", "reports"
             Project.find(params["id"])
           when "issues"
             Issue.find(params["id"]).project
+          when "versions"
+            Version.find(params["id"]).project
+          when "news"
+            News.find(params["id"]).project
           end
         else
           Project.find(project_id)
