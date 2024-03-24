@@ -1,7 +1,7 @@
 module CustomMessageSettingsHelper
   def available_message_options(setting, lang, project=nil)
     options = [['', '']] +
-                CustomMessageSetting.flatten_hash(MessageCustomize::Locale.available_messages(lang, project))
+                CustomMessageSetting.flatten_hash(MessageCustomize::Locale.available_messages(lang))
                 .select{|_k, v| v.is_a?(String)}
                 .map{|k, v| ["#{k}: #{v}", k]}
 

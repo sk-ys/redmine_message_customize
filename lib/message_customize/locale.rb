@@ -10,7 +10,7 @@ module MessageCustomize
         @available_locales ||= Rails.application.config.i18n.load_path.map {|path| File.basename(path, '.*')}.uniq.sort.map(&:to_sym)
       end
 
-      def reload!(*languages, project)
+      def reload!(*languages)
         available_languages = self.find_language(languages.flatten)
         paths = Rails.application.config.i18n.load_path.select {|path| available_languages.include?(File.basename(path, '.*').to_s.split(".")[-1])}
         I18n.backend.load_translations(paths)
@@ -38,9 +38,9 @@ module MessageCustomize
         end
       end
 
-      def available_messages(lang, project=nil)
+      def available_messages(lang)
         lang = :"#{lang}"
-        self.reload!(lang, project) if @available_messages[lang].blank?
+        self.reload!(lang) if @available_messages[lang].blank?
         @available_messages[lang] || {}
       end
 
