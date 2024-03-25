@@ -22,6 +22,15 @@
   <%= error_messages_for(@setting) %>
 <% end %>
 
-<% normal_tab = {name: 'normal', partial: 'custom_message_settings/normal_tab', label: 'label_normal_tab', url: "#{project_url(@project)}/settings/message_customize?lang=#{@lang}&tab=normal", onclick: "if(typeof arguments !== 'undefined'){arguments[0].preventDefault();}if((new window.URL(location.href)).searchParams.get('tab')==='yaml'&&$('#tab-normal').data('initialized')===undefined){showTab('yaml',$('#tab-yaml')[0].href);}else{showTab('normal','#{project_url(@project)}/settings/message_customize?tab=normal&lang='+$('#lang').val());}$('#tab-normal').data('initialized',true);"} %>
+<% normal_tab = {
+  name: 'normal', partial: 'custom_message_settings/normal_tab', label: 'label_normal_tab',
+  url: "#{project_url(@project)}/settings/message_customize?lang=#{@lang}&tab=normal",
+  onclick:
+    "if(typeof arguments !== 'undefined'){arguments[0].preventDefault();}" +
+    "if((new window.URL(location.href)).searchParams.get('tab')==='yaml'&&$('#tab-normal').data('initialized')===undefined)" +
+    "{showTab('yaml',$('#tab-yaml')[0].href);}" +
+    "else if(new RegExp('/settings/message_customize$').test(location.pathname))" +
+    "{showTab('normal','#{project_url(@project)}/settings/message_customize?tab=normal&lang='+$('#lang').val());}" +
+    "$('#tab-normal').data('initialized',true);"} %>
 <% yaml_tab = {name: 'yaml', partial: 'custom_message_settings/yaml_tab', label: 'label_yaml_tab', url: "#{project_url(@project)}/settings/message_customize?tab=yaml"} %>
 <%= render_tabs (@setting.errors.any? ? [] : [normal_tab]) + [yaml_tab] %>
